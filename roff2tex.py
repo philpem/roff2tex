@@ -2,9 +2,12 @@
 
 import pyparsing as pp
 import sys
+from bidict import bidict
 from sys import stderr
 
-# Parser
+#############################################################################
+# RUNOFF parser
+#############################################################################
 
 SEPARATOR = (pp.Literal(" ") | pp.Literal(";"))[...]
 FLAGNAME  = pp.Word(pp.alphas)
@@ -13,13 +16,13 @@ FLAGNAME  = pp.Word(pp.alphas)
 CMD_APPENDIX = pp.Literal(".AX") + SEPARATOR + pp.rest_of_line("text")
 
 # Blank lines
-CMD_BLANK = pp.Literal(".B") + SEPARATOR + pp.common.integer
+CMD_BLANK = pp.Literal(".B") + SEPARATOR + pp.common.integer("n")
 
 # Centre text
 CMD_CENTRE = pp.Literal(".C") + SEPARATOR + pp.rest_of_line("text")
 
 # Heading
-CMD_HEADING = pp.Literal(".HL") + pp.common.integer + SEPARATOR + pp.rest_of_line
+CMD_HEADING = pp.Literal(".HL") + pp.common.integer("n") + SEPARATOR + pp.rest_of_line("text")
 
 # FLag or NoFLag command
 CMD_FLAG   = pp.Literal(".FL")  + SEPARATOR + FLAGNAME("flag") + pp.Regex(".")("flagchar")
@@ -64,6 +67,92 @@ COMMAND = \
 parser = COMMAND | pp.rest_of_line("line")
 
 
+#############################################################################
+# Command handlers
+#############################################################################
+
+# Flag character map
+flagchars = bidict({
+        '^': 'uppercase'
+        })
+
+# Raw text line handler (not a cmdh)
+def textline(s):
+    so = ""
+    eol = ""
+
+    f_accept = False
+    f_uppercase = False
+
+    for ch in s:
+        if f_accept:
+            # if last character was ACCEPT flag, this one should be verbatim
+            so += ch
+            f_accept = False
+            continue
+
+        # process flag characters
+        if ch in flagchars:
+            if flagchars[ch] == 'accept':
+                f_accept = True
+            elif flagchars[ch] == 'uppercase':
+                f_uppercase = True
+            elif flagchars[ch] == 'underline':
+                # underline applies to a whole line
+                so += '\\underline{'
+                eol = '}' + eol
+            else:
+                sys.stderr.write(f">> WARN: Unsupported flag {flagchars[ch]} ({ch})\n")
+        else:
+            # normal character, not a flag character
+            if f_uppercase:
+                so += ch.upper()
+                f_uppercase = False
+            else:
+                so += ch
+
+    # Replace TeX special characters
+    so = so.replace('_', '\\_')
+    so = so.replace('$', '\\$')
+    so = so.replace('#', '\\#')
+    so = so.replace('<', '$<$')
+    so = so.replace('>', '$>$')
+    return so + eol
+
+
+# Command handlers are called with the parser output as a parameter.
+
+# centred text
+def cmdh_centre(p):
+    print(f"\\centerline{{{textline(p['text'])}}}")
+
+def cmdh_flag(p):
+    flagchars[p['flagchar']] = p['flag']
+
+def cmdh_noflag(p):
+    if p['flag'] in flagchars:
+        del flagchars[p['flag']]
+
+# heading
+def cmdh_heading(p):
+    sub = 'sub' * (p['n'] - 1)
+    print(f"\\{sub}section{{{p['text'].strip()}}}")
+
+
+CMD_HANDLERS = {
+        '.C':   cmdh_centre,
+        '.FL':  cmdh_flag,
+        '.NFL': cmdh_noflag,
+        '.HL':  cmdh_heading
+        }
+
+#############################################################################
+#############################################################################
+
+print('\\documentclass{article}')
+print('\\begin{document}')
+
+
 lnum = 0
 
 for line in sys.stdin:
@@ -82,11 +171,20 @@ for line in sys.stdin:
     #print(line)
     p = parser.parse_string(line, True)
     if 'line' in p.as_dict():
+        # trap unparsed commands
         if line.startswith('.'):
             print(f"*** Unparsed command: {line}")
             sys.exit(1)
-        else:
-            print(f"{p['line']}")
+
+        # no command, print line verbatim
+        print(textline(p['line']))
     else:
-        print(f"Parse: Cmd [{p[0]}] PARMS -> {p.as_dict()}")
+        # run command handler
+        handler = CMD_HANDLERS.get(p[0])
+        if handler != None:
+            handler(p)
+        else:
+            sys.stderr.write(f"*** Unhandled Cmd [{p[0]}] PARMS -> {p.as_dict()}\n")
+
+print('\\end{document}')
 
