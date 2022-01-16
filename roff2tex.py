@@ -2,8 +2,24 @@
 
 import pyparsing as pp
 import sys
+import time
 from bidict import bidict
 from sys import stderr
+
+
+#############################################################################
+
+# Case insensitive replace() from https://stackoverflow.com/questions/919056/case-insensitive-replace
+
+def ireplace(old, new, text):
+    idx = 0
+    while idx < len(text):
+        index_l = text.lower().find(old.lower(), idx)
+        if index_l == -1:
+            return text
+        text = text[:index_l] + new + text[index_l + len(old):]
+        idx = index_l + len(new) 
+    return text
 
 #############################################################################
 # RUNOFF parser
@@ -78,11 +94,14 @@ flagchars = bidict({
 
 # Raw text line handler (not a cmdh)
 def textline(s):
+    global in_literal
+
     so = ""
     eol = ""
 
     f_accept = False
     f_uppercase = False
+    f_substitute = False
 
     for ch in s:
         if f_accept:
@@ -92,15 +111,18 @@ def textline(s):
             continue
 
         # process flag characters
-        if ch in flagchars:
+        if not in_literal and ch in flagchars:
             if flagchars[ch] == 'accept':
                 f_accept = True
             elif flagchars[ch] == 'uppercase':
                 f_uppercase = True
             elif flagchars[ch] == 'underline':
-                # underline applies to a whole line
+                # FIXME: if prefixed with UPPERCASE, underline locks on -- otherwise it's only for one character
                 so += '\\underline{'
                 eol = '}' + eol
+            elif flagchars[ch] == 'substitute':
+                f_substitute = True
+                so += ch
             else:
                 sys.stderr.write(f">> WARN: Unsupported flag {flagchars[ch]} ({ch})\n")
         else:
@@ -111,12 +133,26 @@ def textline(s):
             else:
                 so += ch
 
+    # Process substitutions
+    if f_substitute:
+        sub = flagchars.inverse['substitute'] * 2
+        so = ireplace(f"{sub}date",    time.strftime("%d %B %Y"), so)
+        so = ireplace(f"{sub}time",    time.strftime("%H:%M:%S"), so)
+        so = ireplace(f"{sub}year",    time.strftime("%Y"), so)
+        so = ireplace(f"{sub}month",   time.strftime("%M"), so)
+        so = ireplace(f"{sub}day",     time.strftime("%d"), so)
+        so = ireplace(f"{sub}hours",   time.strftime("%H"), so)
+        so = ireplace(f"{sub}minutes", time.strftime("%M"), so)
+        so = ireplace(f"{sub}seconds", time.strftime("%S"), so)
+
     # Replace TeX special characters
-    so = so.replace('_', '\\_')
-    so = so.replace('$', '\\$')
-    so = so.replace('#', '\\#')
-    so = so.replace('<', '$<$')
-    so = so.replace('>', '$>$')
+    if not in_literal:
+        so = so.replace('_', '\\_')
+        so = so.replace('$', '\\$')
+        so = so.replace('#', '\\#')
+        so = so.replace('<', '$<$')
+        so = so.replace('>', '$>$')
+
     return so + eol
 
 
@@ -128,6 +164,7 @@ def cmdh_centre(p):
 
 # flag or noflag
 def cmdh_flag(p):
+    # FIXME: when flag isn't specified, enable the default flag
     flagchars[p['flagchar']] = p['flag']
 
 def cmdh_noflag(p):
@@ -165,10 +202,16 @@ def cmdh_list_end(p):
     print("\\end{itemize}")
 
 # literal text
+in_literal = False
+
 def cmdh_literal_start(p):
+    global in_literal
+    in_literal = True
     print("\\begin{verbatim}")
 
 def cmdh_literal_end(p):
+    global in_literal
+    in_literal = False
     print("\\end{verbatim}")
 
 
