@@ -219,6 +219,17 @@ def cmdh_literal_end(p):
     in_literal = False
     print("\\end{verbatim}")
 
+def cmdh_request(p):
+    print("\\begin{verbatim}")
+
+    filename = p['filename'].replace(":", "/").lower()
+
+    with open(filename, "rt") as f:
+        for l in f.readlines():
+            print(l.rstrip())
+
+    print("\\end{verbatim}")
+
 
 CMD_HANDLERS = {
         '.AX':  cmdh_appendix,
@@ -233,7 +244,8 @@ CMD_HANDLERS = {
         '.LE':  cmdh_list_elem,
         '.ELS': cmdh_list_end,
         '.LT':  cmdh_literal_start,
-        '.EL':  cmdh_literal_end,   
+        '.EL':  cmdh_literal_end,
+        '.REQ': cmdh_request,
         }
 
 #############################################################################
