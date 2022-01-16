@@ -126,6 +126,7 @@ def textline(s):
 def cmdh_centre(p):
     print(f"\\centerline{{{textline(p['text'])}}}")
 
+# flag or noflag
 def cmdh_flag(p):
     flagchars[p['flagchar']] = p['flag']
 
@@ -138,12 +139,24 @@ def cmdh_heading(p):
     sub = 'sub' * (p['n'] - 1)
     print(f"\\{sub}section{{{p['text'].strip()}}}")
 
+# lists
+def cmdh_list_start(p):
+    print("\\begin{itemize}")
+
+def cmdh_list_elem(p):
+    print(f"\\item {textline(p['text'])}")
+
+def cmdh_list_end(p):
+    print("\\end{itemize}")
 
 CMD_HANDLERS = {
         '.C':   cmdh_centre,
         '.FL':  cmdh_flag,
         '.NFL': cmdh_noflag,
-        '.HL':  cmdh_heading
+        '.HL':  cmdh_heading,
+        '.LS':  cmdh_list_start,
+        '.LE':  cmdh_list_elem,
+        '.ELS': cmdh_list_end
         }
 
 #############################################################################
