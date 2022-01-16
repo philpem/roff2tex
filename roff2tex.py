@@ -158,6 +158,11 @@ def textline(s):
 
 # Command handlers are called with the parser output as a parameter.
 
+# blank line
+def cmdh_blank(p):
+    for i in range(p['n']):
+        print("\\vspace{\\baselineskip}")
+
 # centred text
 def cmdh_centre(p):
     print(f"\\centerline{{{textline(p['text'])}}}")
@@ -217,6 +222,7 @@ def cmdh_literal_end(p):
 
 CMD_HANDLERS = {
         '.AX':  cmdh_appendix,
+        '.B':   cmdh_blank,
         '.C':   cmdh_centre,
         '.FL':  cmdh_flag,
         '.NFL': cmdh_noflag,
