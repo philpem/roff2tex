@@ -190,7 +190,7 @@ def cmdh_appendix(p):
     if not in_appendices:
         print("\\appendix")
         in_appendices = True
-    print(f"\\section{{{p['text'].strip()}}}")
+    print(f"\\newpage\\section{{{p['text'].strip()}}}")
 
 def cmdh_heading(p):
     sub = 'sub' * (p['n'] - 1)
