@@ -136,7 +136,7 @@ def cmdh_noflag(p):
 
 # footnotes
 def cmdh_footnote_start(p):
-    print("\\footnote {")
+    print("\\let\\thefootnote\\relax\\footnote {")
 
 def cmdh_footnote_end(p):
     print("}")
@@ -164,6 +164,13 @@ def cmdh_list_elem(p):
 def cmdh_list_end(p):
     print("\\end{itemize}")
 
+# literal text
+def cmdh_literal_start(p):
+    print("\\begin{verbatim}")
+
+def cmdh_literal_end(p):
+    print("\\end{verbatim}")
+
 
 CMD_HANDLERS = {
         '.AX':  cmdh_appendix,
@@ -175,14 +182,18 @@ CMD_HANDLERS = {
         '.HL':  cmdh_heading,
         '.LS':  cmdh_list_start,
         '.LE':  cmdh_list_elem,
-        '.ELS': cmdh_list_end
+        '.ELS': cmdh_list_end,
+        '.LT':  cmdh_literal_start,
+        '.EL':  cmdh_literal_end,   
         }
 
 #############################################################################
 #############################################################################
 
-print('\\documentclass{article}')
-print('\\begin{document}')
+print("""
+\\documentclass{article}
+\\begin{document}
+""")
 
 
 lnum = 0
