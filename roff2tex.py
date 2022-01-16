@@ -134,7 +134,22 @@ def cmdh_noflag(p):
     if p['flag'] in flagchars:
         del flagchars[p['flag']]
 
-# heading
+# footnotes
+def cmdh_footnote_start(p):
+    print("\\footnote {")
+
+def cmdh_footnote_end(p):
+    print("}")
+
+# headings and appendices
+in_appendices = False
+def cmdh_appendix(p):
+    global in_appendices
+    if not in_appendices:
+        print("\\appendix")
+        in_appendices = True
+    print(f"\\section{{{p['text'].strip()}}}")
+
 def cmdh_heading(p):
     sub = 'sub' * (p['n'] - 1)
     print(f"\\{sub}section{{{p['text'].strip()}}}")
@@ -149,10 +164,14 @@ def cmdh_list_elem(p):
 def cmdh_list_end(p):
     print("\\end{itemize}")
 
+
 CMD_HANDLERS = {
+        '.AX':  cmdh_appendix,
         '.C':   cmdh_centre,
         '.FL':  cmdh_flag,
         '.NFL': cmdh_noflag,
+        '.FN':  cmdh_footnote_start,
+        '.EFN': cmdh_footnote_end,
         '.HL':  cmdh_heading,
         '.LS':  cmdh_list_start,
         '.LE':  cmdh_list_elem,
