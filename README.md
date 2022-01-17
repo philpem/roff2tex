@@ -4,6 +4,8 @@ Phil Pemberton, January 2022
 
 This is a quick and dirty tool to make Digital Standard RUNOFF files (from VAX/VMS/OpenVMS systems) readable on more modern systems. It's a Python script which parses the RUNOFF input on `stdin` and prints LaTeX data to `stdout`.
 
+This came about because the truly ancient "rnotroff" tool didn't work for me -- the supporting `troff` macros caused a variety of "interesting" problems. I already knew LaTeX, and RUNOFF seemed simple enough to convert to it.
+
 # Known issues
 
   - Flag handling is not correct; notably formatting code latching an unlatching (using the Uppercase and Lowercase flags as prefixes) is not correct.
